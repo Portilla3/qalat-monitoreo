@@ -43,9 +43,10 @@ html,body,[class*="css"]{{font-family:'Calibri',sans-serif;}}
 .badge{{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:600;margin-right:4px;}}
 .badge-centro{{background:#E8F0FE;color:{NAVY};}}
 .badge-periodo{{background:#E8F5E9;color:#1B5E20;}}
-div.stButton>button{{background:{NAVY};color:white;border:none;
-    padding:.6rem 2rem;border-radius:6px;font-size:1rem;font-weight:600;width:100%;}}
-div.stButton>button:hover{{background:{MID};}}
+div.stButton>button{{background:#1E7E34;color:white;border:none;
+    padding:.6rem 2rem;border-radius:6px;font-size:1rem;font-weight:600;width:100%;
+    box-shadow:0 2px 6px rgba(30,126,52,.35);letter-spacing:.3px;}}
+div.stButton>button:hover{{background:#145222;box-shadow:0 3px 10px rgba(30,126,52,.5);}}
 #MainMenu,footer,header{{visibility:hidden;}}
 </style>""", unsafe_allow_html=True)
 
@@ -59,6 +60,14 @@ with st.sidebar:
     st.markdown('1. Sube tu Excel bruto\n2. Aplica filtros (opcional)\n3. Elige reportes\n4. Clic en **Procesar**\n5. Descarga')
     st.markdown('---')
     st.caption(f'QALAT v3.0 · {datetime.now().strftime("%d/%m/%Y")}')
+    st.markdown('---')
+    st.markdown(
+        '<div style="font-size:.75rem;color:#999;line-height:1.6;">'
+        '© Rodrigo Portilla<br>'
+        '<span style="color:#bbb;">UNODC Chile · Proyecto QALAT</span>'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 LABELS = {
     'caract_excel':('📋 Tablas caracterización',   'Excel',      '11 tablas al ingreso: sexo, edad, sustancias, transgresión'),
@@ -150,10 +159,10 @@ if uploaded:
 
     with fc3:
         st.markdown('<div class="filter-box"><h4>📄 Reportes a generar</h4>', unsafe_allow_html=True)
-        cb_ce  = st.checkbox('Tablas caracterización', value=True,  key='cb_ce')
-        cb_se  = st.checkbox('Tablas seguimiento',     value=True,  key='cb_se')
-        cb_pc  = st.checkbox('PDF caracterización',    value=True,  key='cb_pc')
-        cb_ps  = st.checkbox('PDF seguimiento',        value=True,  key='cb_ps')
+        cb_ce  = st.checkbox('Tablas caracterización', value=False, key='cb_ce')
+        cb_se  = st.checkbox('Tablas seguimiento',     value=False, key='cb_se')
+        cb_pc  = st.checkbox('PDF caracterización',    value=False, key='cb_pc')
+        cb_ps  = st.checkbox('PDF seguimiento',        value=False, key='cb_ps')
         cb_ppc = st.checkbox('PPT caracterización',    value=False, key='cb_ppc')
         cb_pps = st.checkbox('PPT seguimiento',        value=False, key='cb_pps')
         st.markdown('</div>', unsafe_allow_html=True)

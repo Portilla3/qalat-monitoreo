@@ -53,6 +53,7 @@ div.stButton>button:hover{{background:#145222;box-shadow:0 3px 10px rgba(30,126,
 st.markdown("""<div class="qalat-hdr">
   <h1>📊 QALAT · Sistema de Monitoreo de Resultados de Tratamiento</h1>
   <p>Procesamiento automático TOP · Sube tu Excel, aplica filtros y descarga todos los reportes</p>
+  <p style="margin-top:.6rem;font-size:.75rem;color:#7fa8cc;">© Rodrigo Portilla · UNODC Chile</p>
 </div>""", unsafe_allow_html=True)
 
 with st.sidebar:

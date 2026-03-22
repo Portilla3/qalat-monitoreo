@@ -111,15 +111,59 @@ def run_script(script_key, wide_path, filtro_centro=None):
             mod.build_cambio_consumo(wb, seg, N_seg, DC)
             wb.save(out_path)
 
-        elif script_key == 'pdf_caract':
-            mod = _load_mod(script_key, wide_path, out_path, filtro_centro)
-            R = mod.cargar_datos()
-            mod.build_word(R)
+        elif script_key in ('pdf_caract', 'pdf_seg'):
+            import subprocess
+            src = open(str(PIPELINE_DIR / SCRIPT_FILES[script_key]), encoding='utf-8').read()
 
-        elif script_key == 'pdf_seg':
-            mod = _load_mod(script_key, wide_path, out_path, filtro_centro)
-            R = mod.cargar_datos()
-            mod.build_word(R)
+            # 1. Parchear INPUT_FILE = None → usar variable de entorno
+            src = re.sub(
+                r'INPUT_FILE\s*=\s*None.*?# runner inyecta la ruta real',
+                'INPUT_FILE = __import__("os").environ["QALAT_WIDE"]',
+                src
+            )
+            # 2. Parchear auto_archivo_wide para usar env var
+            src = re.sub(
+                r'def auto_archivo_wide\(\):.*?return [^\n]+\n',
+                'def auto_archivo_wide():\n    return __import__("os").environ["QALAT_WIDE"]\n',
+                src, flags=re.DOTALL
+            )
+            # 3. Parchear OUTPUT_FILE = None → usar env var
+            src = src.replace(
+                'OUTPUT_FILE   = None   # runner inyecta la ruta real',
+                'OUTPUT_FILE = __import__("os").environ["QALAT_OUT"]'
+            )
+            src = src.replace(
+                'OUTPUT_FILE = None   # runner inyecta la ruta real',
+                'OUTPUT_FILE = __import__("os").environ["QALAT_OUT"]'
+            )
+            # 4. Parchear FILTRO_CENTRO = None → usar env var (puede estar vacío)
+            src = src.replace(
+                'FILTRO_CENTRO = None   # runner inyecta el filtro si aplica',
+                'FILTRO_CENTRO = __import__("os").environ.get("QALAT_CENTRO") or None'
+            )
+
+            # Guardar script parcheado y ejecutar
+            fd2, tmp_py = tempfile.mkstemp(suffix='.py', prefix='qs_word_')
+            os.close(fd2)
+            with open(tmp_py, 'w', encoding='utf-8') as f:
+                f.write(src)
+
+            env = os.environ.copy()
+            env['QALAT_WIDE']   = wide_path
+            env['QALAT_OUT']    = out_path
+            env['QALAT_CENTRO'] = filtro_centro or ''
+
+            try:
+                r = subprocess.run(
+                    [sys.executable, tmp_py],
+                    capture_output=True, text=True,
+                    timeout=180, env=env
+                )
+                if r.returncode != 0:
+                    raise RuntimeError(r.stderr[-2000:] or r.stdout[-2000:])
+            finally:
+                try: os.unlink(tmp_py)
+                except: pass
 
         elif script_key in ('pptx_caract', 'pptx_seg'):
             import subprocess

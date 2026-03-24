@@ -26,7 +26,7 @@ html,body,[class*="css"]{{font-family:'Calibri',sans-serif;}}
 .main{{background:#F8FAFD;}}
 .qalat-hdr{{background:{NAVY};color:white;padding:1.2rem 2rem;border-radius:8px;margin-bottom:1.5rem;border-left:8px solid {MID};}}
 .qalat-hdr h1{{color:white;font-size:1.6rem;margin:0;}}
-.qalat-hdr h1 .instrumento{{font-size:2.2rem;font-weight:900;color:{MID};margin-right:.4rem;}}
+.qalat-hdr h1 .instrumento{{font-size:2.2rem;font-weight:900;color:#9DC3E6;margin-left:.2rem;}}
 .qalat-hdr p{{color:#BDD7EE;font-size:.9rem;margin:.3rem 0 0 0;}}
 .kpi{{background:white;border-radius:8px;padding:1rem 1.2rem;border-left:4px solid {MID};
       box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:.5rem;}}
@@ -52,7 +52,7 @@ div.stButton>button:hover{{background:#145222;box-shadow:0 3px 10px rgba(30,126,
 </style>""", unsafe_allow_html=True)
 
 st.markdown("""<div class="qalat-hdr">
-  <h1>📊 QALAT · <span class="instrumento">TOP</span> · Sistema de Monitoreo de Resultados de Tratamiento</h1>
+  <h1>📊 QALAT · Monitoreo de Resultados de Tratamiento — Instrumento <span class="instrumento">TOP</span></h1>
   <p>Procesamiento automático TOP · Sube tu Excel, aplica filtros y descarga todos los reportes</p>
   <p style="margin-top:.6rem;font-size:.75rem;color:#7fa8cc;">© Rodrigo Portilla · UNODC</p>
 </div>""", unsafe_allow_html=True)

@@ -370,7 +370,7 @@ def _filtrar_wide_centro(wide_path, centro, out_path):
     wb_new.save(out_path)
 
 
-def run_paquetes_centros(wide_path, keys_sel=None, progress_cb=None):
+def run_paquetes_centros(wide_path, keys_sel=None, progress_cb=None, raw_input_path=None):
     """
     Genera un ZIP maestro con una carpeta por centro.
     Cada carpeta contiene:
@@ -403,33 +403,49 @@ def run_paquetes_centros(wide_path, keys_sel=None, progress_cb=None):
             if progress_cb:
                 progress_cb(i, n_centros, centro)
 
-            # 1. Base Wide filtrada por centro
+            # 1. Base Wide filtrada por centro — regenerar TODAS las hojas
+            wide_centro_path = None
             try:
-                fd_wide, wide_centro_path = tempfile.mkstemp(suffix='.xlsx', prefix='qalat_wide_')
-                os.close(fd_wide)
-                _filtrar_wide_centro(wide_path, centro, wide_centro_path)
+                if raw_input_path and os.path.exists(raw_input_path):
+                    # Regenerar Wide completa filtrada por centro (todas las hojas correctas)
+                    from pipeline.wide_top import procesar_wide as _pw
+                    res_c = _pw(raw_input_path, filtro_centro=centro)
+                    fd_w, wide_centro_path = tempfile.mkstemp(suffix='.xlsx', prefix='qalat_wc_')
+                    os.close(fd_w)
+                    with open(wide_centro_path, 'wb') as f:
+                        f.write(res_c['excel_bytes'].getvalue())
+                else:
+                    # Fallback: filtrar solo hoja Base Wide
+                    fd_w, wide_centro_path = tempfile.mkstemp(suffix='.xlsx', prefix='qalat_wc_')
+                    os.close(fd_w)
+                    _filtrar_wide_centro(wide_path, centro, wide_centro_path)
+
                 with open(wide_centro_path, 'rb') as f:
                     zf.writestr(f'{carpeta}BASE_Wide_{slug}.xlsx', f.read())
             except Exception as e:
                 zf.writestr(f'{carpeta}ERROR_base_{slug}.txt', f'Error generando base: {e}')
-                wide_centro_path = wide_path  # fallback: usar wide completo
-            finally:
-                try: os.unlink(wide_centro_path)
-                except: pass
+                wide_centro_path = None
 
-            # 2. Reportes filtrados por centro
-            # Para reportes usamos wide_path completo + filtro_centro en run_script
+            # 2. Reportes — usar Wide filtrada si existe, sino fallback con filtro
+            effective_wide = wide_centro_path if wide_centro_path and os.path.exists(wide_centro_path) else wide_path
+            use_filtro = None if (wide_centro_path and os.path.exists(wide_centro_path)) else centro
+
             for key in keys_sel:
                 out_fname, _ = OUTPUTS[key]
                 base_name = out_fname.rsplit('.', 1)[0]
                 ext       = out_fname.rsplit('.', 1)[1]
                 archivo_zip = f'{carpeta}{base_name}_{slug}.{ext}'
                 try:
-                    buf, _, _ = run_script(key, wide_path, filtro_centro=centro)
+                    buf, _, _ = run_script(key, effective_wide, filtro_centro=use_filtro)
                     zf.writestr(archivo_zip, buf.getvalue())
                 except Exception as e:
                     zf.writestr(f'{carpeta}ERROR_{key}_{slug}.txt',
                                 f'Error generando {out_fname}: {e}')
+
+            # Limpiar Wide temporal del centro
+            if wide_centro_path and wide_centro_path != wide_path:
+                try: os.unlink(wide_centro_path)
+                except: pass
 
     if progress_cb:
         progress_cb(n_centros, n_centros, 'listo')

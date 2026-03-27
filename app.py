@@ -807,235 +807,59 @@ with tab_reportes:
                     st.error(f'❌ Error generando paquetes: {e}')
 
 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # TAB 2: CORRECCIÓN DE REGISTROS
+# Carga el formulario HTML original e inyecta credenciales desde Secrets
 # ──────────────────────────────────────────────────────────────────────────────
+import streamlit.components.v1 as _components
+import os as _os
 
-# Grupos de campos para el formulario de edición (orden y agrupación)
-GRUPOS_CAMPOS = {
-    '📋 Identificación': [
-        'pais','centro','codigo_paciente','fecha_entrevista',
-        'fecha_nacimiento','nombre_entrevistador','sexo','etapa','sustancia_principal',
-    ],
-    '🍺 Alcohol': ['alcohol_s4','alcohol_s3','alcohol_s2','alcohol_s1','alcohol_total','alcohol_prom'],
-    '🌿 Marihuana': ['marihuana_s4','marihuana_s3','marihuana_s2','marihuana_s1','marihuana_total','marihuana_prom'],
-    '⚗️ Pasta base': ['pastabase_s4','pastabase_s3','pastabase_s2','pastabase_s1','pastabase_total','pastabase_prom'],
-    '🧪 Cocaína': ['cocaina_s4','cocaina_s3','cocaina_s2','cocaina_s1','cocaina_total','cocaina_prom'],
-    '💊 Sedantes': ['sedantes_s4','sedantes_s3','sedantes_s2','sedantes_s1','sedantes_total','sedantes_prom'],
-    '🔴 Crack / Metanfetamina / Heroína': [
-        'crack_s4','crack_s3','crack_s2','crack_s1','crack_total','crack_prom',
-        'metanfetamina_s4','metanfetamina_s3','metanfetamina_s2','metanfetamina_s1','metanfetamina_total','metanfetamina_prom',
-        'heroina_s4','heroina_s3','heroina_s2','heroina_s1','heroina_total','heroina_prom',
-    ],
-    '🏠 Transgresión / VIF': [
-        'hurto','robo','venta_droga','rina_pelea',
-        'vif_s4','vif_s3','vif_s2','vif_s1','vif_total',
-        'otra_accion','otra_accion_desc',
-    ],
-    '❤️ Salud / Vivienda / Calidad de vida': [
-        'salud_psicologica','salud_fisica','calidad_vida',
-        'vivienda_estable','vivienda_basica',
-    ],
-    '💼 Trabajo / Educación': [
-        'dias_trabajo_s4','dias_trabajo_s3','dias_trabajo_s2','dias_trabajo_s1','dias_trabajo_total',
-        'dias_educacion_s4','dias_educacion_s3','dias_educacion_s2','dias_educacion_s1','dias_educacion_total',
-        'ocupaciones_norem_s4','ocupaciones_norem_s3','ocupaciones_norem_s2','ocupaciones_norem_s1','ocupaciones_norem_total',
-    ],
-}
-
-# Campos numéricos (usan number_input en vez de text_input)
-CAMPOS_NUMERICOS = {c for grupo in GRUPOS_CAMPOS.values() for c in grupo
-                    if any(x in c for x in ['_s4','_s3','_s2','_s1','_total','_prom',
-                                             'salud','calidad','dias_','ocupaciones'])}
-
-COLS_RESUMEN = ['id','pais','centro','codigo_paciente','fecha_entrevista',
-                'etapa','sexo','nombre_entrevistador','sustancia_principal']
+_CORRECCION_HTML = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'correccion_top_peru.html')
 
 with tab_correccion:
-    st.markdown('<div class="sec">✏️ Corrección de registros</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div style="background:#FFF8E1;border-left:4px solid #F9A825;padding:.8rem 1.2rem;'
-        'border-radius:6px;margin-bottom:1rem;">'
-        '<b>⚠ Atención:</b> Los cambios se aplican directamente en Supabase y no pueden deshacerse. '
-        'Verifica bien antes de guardar o eliminar.'
-        '</div>', unsafe_allow_html=True
-    )
-
-    # ── Selector de país y botón cargar ──────────────────────────────────────
-    col_pais_c, col_btn_c = st.columns([2, 1])
-    with col_pais_c:
+    # Solo Perú y UNODC acceden a corrección por ahora
+    if rol not in ('Perú', 'UNODC'):
+        st.info(f'El formulario de corrección para {flag} {rol} estará disponible próximamente.')
+    else:
+        # Selector de país para UNODC
         if es_unodc:
-            pais_corr = st.selectbox('País a revisar', ['Todos'] + PAISES_ACTIVOS, key='corr_pais')
-        else:
-            pais_corr = pais_fijo
-            st.markdown(f'**País:** {flag} {pais_fijo}')
-    with col_btn_c:
-        st.markdown('<div style="margin-top:28px"></div>', unsafe_allow_html=True)
-        cargar_corr = st.button('🔄 Cargar registros', use_container_width=True, key='btn_cargar_corr')
-
-    if cargar_corr:
-        try:
-            pais_a_cargar = pais_corr if es_unodc else pais_fijo
-            registros_raw = _cargar_supabase(pais_a_cargar)
-            st.session_state['corr_registros']  = registros_raw
-            st.session_state['corr_editando']   = None
-            st.session_state.pop('corr_confirm_del', None)
-            st.success(f'✓ {len(registros_raw)} registros cargados')
-        except Exception as e:
-            st.error(f'❌ Error al cargar: {e}')
-
-    # ── Tabla resumen + acciones ──────────────────────────────────────────────
-    if st.session_state.get('corr_registros'):
-        registros = st.session_state['corr_registros']
-        df_corr   = pd.DataFrame(registros)
-        cols_disp = [c for c in COLS_RESUMEN if c in df_corr.columns]
-        df_show   = df_corr[cols_disp].copy()
-
-        # Buscador rápido
-        buscar = st.text_input('🔍 Buscar por código de paciente, centro o cualquier campo',
-                               key='corr_buscar', placeholder='Escribe para filtrar...')
-        if buscar:
-            mask = df_show.apply(
-                lambda row: row.astype(str).str.contains(buscar, case=False, na=False).any(), axis=1
+            pais_corr = st.selectbox(
+                'Corregir registros de:',
+                ['Perú'],   # agregar 'Ecuador', 'México' cuando existan sus formularios
+                key='corr_pais_sel'
             )
-            df_show = df_show[mask]
+        else:
+            pais_corr = rol
 
-        st.markdown(f'**{len(df_show)} registro(s) mostrados**')
-        st.dataframe(df_show, use_container_width=True, height=260, hide_index=True,
-                     column_config={'id': st.column_config.NumberColumn('ID', width='small')})
-
-        st.markdown('---')
-
-        # ── Selector de registro ──────────────────────────────────────────────
-        ids_disp   = df_corr['id'].tolist()
-        id_labels  = {
-            r['id']: (f"ID {r['id']} · {r.get('codigo_paciente','?')} · "
-                      f"{r.get('centro','?')} · "
-                      f"{str(r.get('fecha_entrevista','?'))[:10]} · "
-                      f"{r.get('etapa','?')}")
-            for r in registros
-        }
-
-        id_sel = st.selectbox(
-            'Selecciona el registro a editar o eliminar',
-            options=ids_disp,
-            format_func=lambda x: id_labels.get(x, str(x)),
-            key='corr_id_sel'
+        st.markdown(
+            f'''<div style="background:#FFF8E1;border-left:4px solid #F9A825;
+            padding:.7rem 1.2rem;border-radius:6px;margin-bottom:.5rem;font-size:.85rem;">
+            <b>⚠ Módulo de corrección — {flag} {pais_corr}.</b>
+            Los cambios se aplican directamente en la base de datos QALAT.
+            </div>''', unsafe_allow_html=True
         )
 
-        col_ed, col_del = st.columns([3, 1])
-        with col_ed:
-            if st.button('✏️ Editar este registro', use_container_width=True, key='btn_editar'):
-                st.session_state['corr_editando']  = id_sel
-                st.session_state.pop('corr_confirm_del', None)
-                st.rerun()
-        with col_del:
-            if st.button('🗑️ Eliminar', use_container_width=True, key='btn_del_init'):
-                st.session_state['corr_confirm_del'] = id_sel
-                st.session_state['corr_editando']    = None
+        try:
+            sb_url = st.secrets['SUPABASE_URL']
+            sb_key = st.secrets['SUPABASE_KEY']
 
-        # ── Confirmación de eliminación ───────────────────────────────────────
-        if st.session_state.get('corr_confirm_del') == id_sel:
-            st.warning(f'⚠ ¿Eliminar definitivamente **{id_labels.get(id_sel,str(id_sel))}**? '
-                       f'Esta acción no se puede deshacer.')
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                if st.button('✅ Sí, eliminar definitivamente', use_container_width=True, key='btn_del_si'):
-                    try:
-                        _eliminar_registro(id_sel)
-                        st.session_state['corr_registros'] = [
-                            r for r in st.session_state['corr_registros'] if r['id'] != id_sel
-                        ]
-                        st.session_state.pop('corr_confirm_del', None)
-                        st.session_state.pop('corr_editando', None)
-                        st.success(f'✓ Registro {id_sel} eliminado correctamente')
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f'❌ Error al eliminar: {e}')
-            with cc2:
-                if st.button('✗ Cancelar', use_container_width=True, key='btn_del_no'):
-                    st.session_state.pop('corr_confirm_del', None)
-                    st.rerun()
+            with open(_CORRECCION_HTML, encoding='utf-8') as _f:
+                _html = _f.read()
 
-        # ── Formulario de edición ─────────────────────────────────────────────
-        if st.session_state.get('corr_editando') == id_sel:
-            registro_actual = next((r for r in registros if r['id'] == id_sel), None)
-            if registro_actual:
-                st.markdown(f'<div class="sec">✏️ Editando: {id_labels.get(id_sel,"")}</div>',
-                            unsafe_allow_html=True)
-                campos_editados = {}
-                todos_campos    = {k: v for k, v in registro_actual.items()
-                                   if k not in ('id', 'created_at')}
+            # Inyectar credenciales desde Secrets (reemplaza placeholders)
+            _html = _html.replace('%%SUPABASE_URL%%', sb_url)
+            _html = _html.replace('%%SUPABASE_KEY%%',  sb_key)
 
-                for grupo_nombre, campos_grupo in GRUPOS_CAMPOS.items():
-                    campos_en_reg = [c for c in campos_grupo if c in todos_campos]
-                    if not campos_en_reg:
-                        continue
-                    with st.expander(grupo_nombre, expanded=(grupo_nombre == '📋 Identificación')):
-                        cols_form = st.columns(3)
-                        for i, campo in enumerate(campos_en_reg):
-                            val_actual = todos_campos.get(campo)
-                            with cols_form[i % 3]:
-                                if campo in CAMPOS_NUMERICOS:
-                                    try:
-                                        val_num = float(val_actual) if val_actual is not None else 0.0
-                                    except (ValueError, TypeError):
-                                        val_num = 0.0
-                                    nuevo = st.number_input(campo, value=val_num, step=1.0,
-                                                            key=f'edit_{id_sel}_{campo}')
-                                else:
-                                    val_str = str(val_actual) if val_actual is not None else ''
-                                    nuevo = st.text_input(campo, value=val_str,
-                                                          key=f'edit_{id_sel}_{campo}')
-                            campos_editados[campo] = nuevo
+            # Renderizar el formulario completo dentro de la pestaña
+            _components.html(_html, height=4200, scrolling=True)
 
-                # Campos fuera de los grupos definidos
-                campos_sin_grupo = [c for c in todos_campos
-                                    if c not in {f for g in GRUPOS_CAMPOS.values() for f in g}]
-                if campos_sin_grupo:
-                    with st.expander('🔧 Otros campos'):
-                        cols_otros = st.columns(3)
-                        for i, campo in enumerate(campos_sin_grupo):
-                            val_actual = todos_campos.get(campo)
-                            with cols_otros[i % 3]:
-                                nuevo = st.text_input(
-                                    campo,
-                                    value=str(val_actual) if val_actual is not None else '',
-                                    key=f'edit_{id_sel}_{campo}'
-                                )
-                            campos_editados[campo] = nuevo
-
-                st.markdown('---')
-                cs1, cs2 = st.columns([3, 1])
-                with cs1:
-                    if st.button('💾 Guardar cambios en Supabase', use_container_width=True,
-                                 key='btn_guardar'):
-                        try:
-                            payload = {}
-                            for k, v in campos_editados.items():
-                                if k in CAMPOS_NUMERICOS:
-                                    payload[k] = v if (v != 0.0 or registro_actual.get(k) is not None) else None
-                                else:
-                                    payload[k] = v if v != '' else None
-                            _actualizar_registro(id_sel, payload)
-                            # Actualizar caché local sin recargar desde Supabase
-                            for r in st.session_state['corr_registros']:
-                                if r['id'] == id_sel:
-                                    r.update(payload)
-                            st.session_state['corr_editando'] = None
-                            st.success('✅ Registro actualizado correctamente en Supabase')
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f'❌ Error al guardar: {e}')
-                with cs2:
-                    if st.button('✗ Cancelar edición', use_container_width=True, key='btn_cancel_edit'):
-                        st.session_state['corr_editando'] = None
-                        st.rerun()
-
-    elif 'corr_registros' not in st.session_state:
-        st.markdown("""<div style="text-align:center;padding:2.5rem;color:#888;">
-            <div style="font-size:2.5rem;">✏️</div>
-            <div style="font-size:1rem;margin-top:.8rem;">
-              Haz clic en <b>Cargar registros</b> para ver, editar o eliminar
-            </div>
-        </div>""", unsafe_allow_html=True)
+        except FileNotFoundError:
+            st.error(
+                '❌ No se encontró el archivo `correccion_top_peru.html` en la raíz del repositorio. '
+                'Asegúrate de que el archivo esté en el repo junto a `app.py`.'
+            )
+        except KeyError:
+            st.error('⚠ Las credenciales de Supabase no están configuradas en Secrets.')
+        except Exception as _e:
+            st.error(f'❌ Error al cargar el formulario de corrección: {_e}')

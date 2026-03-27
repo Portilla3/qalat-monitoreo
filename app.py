@@ -808,57 +808,1184 @@ with tab_reportes:
 
 
 
+
 # ──────────────────────────────────────────────────────────────────────────────
-# TAB 2: CORRECCIÓN DE REGISTROS
-# Carga el formulario HTML original e inyecta credenciales desde Secrets
+# TAB 2: CORRECCIÓN DE REGISTROS — HTML embebido directamente
 # ──────────────────────────────────────────────────────────────────────────────
 import streamlit.components.v1 as _components
-import os as _os
 
-_CORRECCION_HTML = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), 'correccion_top_peru.html')
+_CORRECCION_HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QALAT — Corrección TOP · Perú</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --azul:       #1a3a5c;
+    --azul-med:   #2563a8;
+    --azul-claro: #dbeafe;
+    --verde:      #16a34a;
+    --naranja:    #d97706;
+    --rojo:       #dc2626;
+    --gris-bg:    #e8eef6;
+    --gris-borde: #b0c4de;
+    --blanco:     #ffffff;
+    --texto:      #1e293b;
+    --texto-suave:#4a6080;
+    --radio:      6px;
+    --sombra:     0 2px 8px rgba(26,58,92,.13);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: linear-gradient(160deg, #1a3a5c 0%, #2563a8 40%, #3b82c4 70%, #dbeafe 100%);
+    background-attachment: fixed;
+    color: var(--texto);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  header {
+    background: rgba(10,25,47,0.93);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    border-bottom: 2px solid #d97706;
+  }
+  header .header-texto { display: flex; flex-direction: column; gap: 2px; }
+  header .titulo-form { font-size: .95rem; font-weight: 600; color: #fcd34d; letter-spacing: .5px; }
+  header .subtitulo   { font-size: .78rem; opacity: .65; color: #cbd5e1; }
+  header .pais-badge {
+    margin-left: auto;
+    background: #dc2626;
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  header .modo-badge {
+    background: #d97706;
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .contenedor { max-width: 860px; margin: 28px auto; padding: 0 16px; }
+
+  /* ── BÚSQUEDA ── */
+  .busqueda-card {
+    background: rgba(255,255,255,.97);
+    border-radius: 10px;
+    box-shadow: var(--sombra);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: 2px solid #d97706;
+  }
+  .busqueda-header {
+    background: #d97706;
+    color: #fff;
+    padding: 12px 20px;
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .busqueda-body { padding: 20px; }
+  .busqueda-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; }
+  .fecha-busq-grid { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px; }
+
+  @media (max-width: 600px) {
+    .busqueda-grid { grid-template-columns: 1fr; }
+  }
+
+  .campo { display: flex; flex-direction: column; gap: 5px; }
+  .campo label {
+    font-size: .75rem; font-weight: 700;
+    color: var(--texto-suave);
+    text-transform: uppercase; letter-spacing: .6px;
+  }
+  .campo input, .campo select {
+    border: 1.5px solid var(--gris-borde);
+    border-radius: var(--radio);
+    padding: 9px 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .9rem;
+    color: var(--texto);
+    background: var(--blanco);
+    width: 100%;
+  }
+  .campo input:focus, .campo select:focus {
+    outline: none;
+    border-color: var(--azul-med);
+    box-shadow: 0 0 0 3px rgba(37,99,168,.12);
+  }
+  .campo input.error { border-color: var(--rojo); }
+
+  .btn-buscar {
+    background: var(--azul-med);
+    color: #fff;
+    border: none;
+    border-radius: var(--radio);
+    padding: 10px 24px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+    height: 42px;
+  }
+  .btn-buscar:hover { background: #1a3a5c; }
+  .btn-buscar:disabled { background: #94a3b8; cursor: not-allowed; }
+
+  /* ── REGISTRO ENCONTRADO ── */
+  .seccion {
+    background: rgba(255,255,255,.97);
+    border-radius: 10px;
+    box-shadow: var(--sombra);
+    margin-bottom: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(37,99,168,.15);
+  }
+  .seccion-header {
+    background: var(--azul);
+    color: #fff;
+    padding: 12px 20px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .seccion-header .num {
+    background: rgba(255,255,255,.22);
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem; font-weight: 700;
+  }
+  .seccion-body { padding: 20px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .span-2 { grid-column: span 2; }
+  @media (max-width: 600px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .span-2 { grid-column: span 1; }
+  }
+
+  /* Banner registro encontrado */
+  .registro-encontrado {
+    background: #dcfce7;
+    border: 1.5px solid #16a34a;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .88rem;
+    color: #14532d;
+    font-weight: 600;
+  }
+
+  /* Banner advertencia edición */
+  .advertencia-edicion {
+    background: #fef3c7;
+    border: 1.5px solid #d97706;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 18px;
+    font-size: .82rem;
+    color: #78350f;
+  }
+  .advertencia-edicion strong { color: #92400e; }
+
+  /* ── TABLA SUSTANCIAS ── */
+  .tabla-wrap { overflow-x: auto; }
+  table.sustancias {
+    width: 100%; border-collapse: collapse; font-size: .82rem;
+  }
+  table.sustancias th {
+    background: var(--azul); color: #fff;
+    padding: 8px 10px; text-align: center;
+    font-weight: 700; font-size: .73rem;
+    letter-spacing: .5px; white-space: nowrap;
+  }
+  table.sustancias th:first-child { text-align: left; min-width: 140px; }
+  table.sustancias td {
+    padding: 6px 6px;
+    border-bottom: 1px solid #e2eaf4;
+    vertical-align: middle;
+  }
+  table.sustancias tr:last-child td { border-bottom: none; }
+  table.sustancias tr:hover td { background: #f5f8fc; }
+  table.sustancias td:first-child { font-weight: 600; padding-left: 10px; color: var(--texto); }
+  table.sustancias td.total-cell {
+    background: var(--azul-claro);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700; text-align: center;
+    color: var(--azul); font-size: .85rem;
+  }
+
+  input.num-inp {
+    width: 62px; border: 1.5px solid var(--gris-borde);
+    border-radius: 4px; padding: 6px 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .88rem; text-align: center;
+    color: var(--texto); display: block; margin: 0 auto;
+    -moz-appearance: textfield;
+  }
+  input.num-inp::-webkit-inner-spin-button,
+  input.num-inp::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input.num-inp:focus {
+    outline: none; border-color: var(--azul-med);
+    box-shadow: 0 0 0 2px rgba(37,99,168,.14);
+  }
+  input.num-inp.inp-error { background: #fee2e2; border-color: var(--rojo); }
+
+  input.prom-inp {
+    width: 72px; border: 1.5px solid var(--gris-borde);
+    border-radius: 4px; padding: 6px 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .85rem; text-align: center;
+    color: var(--texto-suave); display: block; margin: 0 auto;
+    -moz-appearance: textfield;
+  }
+  input.prom-inp::-webkit-inner-spin-button,
+  input.prom-inp::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  td.total-cell { min-width: 52px; }
+  .sep { border: none; border-top: 1px solid #e2eaf4; margin: 16px 0; }
+
+  /* ── TRANSGRESIÓN ── */
+  .transgresion-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .toggle-campo { display: flex; flex-direction: column; gap: 5px; }
+  .toggle-campo label {
+    font-size: .75rem; font-weight: 700;
+    color: var(--texto-suave);
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .toggle-btn-group { display: flex; border-radius: var(--radio); overflow: hidden; border: 1.5px solid var(--gris-borde); }
+  .toggle-btn-group button {
+    flex: 1; padding: 8px 0;
+    border: none; background: var(--blanco);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .85rem; font-weight: 500;
+    cursor: pointer; transition: background .15s, color .15s;
+    color: var(--texto-suave);
+  }
+  .toggle-btn-group button:first-child { border-right: 1px solid var(--gris-borde); }
+  .toggle-btn-group button.activo-si { background: #dcfce7; color: #16a34a; font-weight: 700; }
+  .toggle-btn-group button.activo-no { background: #fee2e2; color: #dc2626; font-weight: 700; }
+
+  table.vif-table {
+    width: auto; border-collapse: collapse; font-size: .82rem; margin-top: 4px;
+  }
+  table.vif-table th {
+    background: var(--azul); color: #fff;
+    padding: 7px 12px; font-size: .73rem;
+    text-align: center; font-weight: 700;
+  }
+  table.vif-table td { padding: 6px 8px; border-bottom: 1px solid #e2eaf4; }
+  table.vif-table td.total-cell {
+    background: var(--azul-claro);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700; color: var(--azul); text-align: center;
+  }
+
+  /* ── ESCALA 0-20 ── */
+  .escala-wrap { margin-bottom: 16px; }
+  .escala-label {
+    font-size: .75rem; font-weight: 700; color: var(--texto-suave);
+    text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px;
+  }
+  .escala-extremos {
+    display: flex; justify-content: space-between;
+    font-size: .68rem; font-weight: 600; color: var(--texto-suave);
+    text-transform: uppercase; letter-spacing: .4px;
+    margin-bottom: 4px; padding: 0 2px;
+  }
+  .escala-opciones { display: flex; flex-wrap: wrap; gap: 5px; }
+  .escala-opciones label {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gris-bg);
+    border: 1.5px solid var(--gris-borde);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    cursor: pointer; font-size: .78rem; font-weight: 600;
+    transition: all .15s; text-align: center;
+    color: var(--texto); flex-shrink: 0;
+  }
+  .escala-opciones input[type=radio] { display: none; }
+  .escala-opciones label:hover { background: #dbeafe; border-color: var(--azul-med); }
+  .escala-opciones label:has(input:checked) {
+    background: var(--azul-med); border-color: var(--azul-med);
+    color: #fff; transform: scale(1.12);
+    box-shadow: 0 2px 8px rgba(37,99,168,.35);
+  }
+
+  /* Vivienda */
+  .vivienda-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+
+  /* ── BOTÓN GUARDAR ── */
+  .btn-guardar {
+    display: block; width: 100%; padding: 16px;
+    background: #d97706;
+    color: #fff; border: none; border-radius: 8px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; letter-spacing: .3px;
+    box-shadow: 0 4px 14px rgba(217,119,6,.35);
+    transition: background .15s, box-shadow .15s;
+    margin-top: 8px;
+  }
+  .btn-guardar:hover { background: #b45309; box-shadow: 0 6px 18px rgba(217,119,6,.45); }
+  .btn-guardar:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+  .nota { text-align: center; font-size: .78rem; color: rgba(255,255,255,.7); margin-top: 10px; }
+
+  /* ── TOAST ── */
+  #toast {
+    display: none; position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    background: #16a34a; color: #fff;
+    padding: 12px 28px; border-radius: 8px;
+    font-size: .9rem; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    z-index: 999; min-width: 260px; text-align: center;
+  }
+  #toast.error-toast { background: #dc2626; }
+  #toast.warn-toast  { background: #d97706; }
+
+  /* Estado vacío */
+  #formulario-correc { display: none; }
+  .estado-inicial {
+    text-align: center; padding: 3rem;
+    color: rgba(255,255,255,.8);
+  }
+  .estado-inicial .icono { font-size: 3rem; margin-bottom: 1rem; }
+  .estado-inicial p { font-size: 1rem; }
+  .estado-inicial small { font-size: .85rem; opacity: .7; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-texto">
+    <div class="titulo-form">✏️ Corrección de Registros TOP</div>
+    <div class="subtitulo">Proyecto QALAT · UNODC Chile</div>
+    <div class="subtitulo">© Rodrigo Portilla · UNODC</div>
+  </div>
+  <span class="modo-badge">✏️ Edición</span>
+  <span class="pais-badge">🇵🇪 Perú</span>
+</header>
+
+<div class="contenedor">
+
+  <!-- ══ BÚSQUEDA ══ -->
+  <div class="busqueda-card">
+    <div class="busqueda-header">🔍 Buscar registro a corregir</div>
+    <div class="busqueda-body">
+      <div class="advertencia-edicion">
+        <strong>⚠️ Módulo de corrección.</strong> Busca el registro por código de paciente y fecha de entrevista. Los cambios que guardes se aplicarán directamente en la base de datos QALAT.
+      </div>
+      <div class="busqueda-grid">
+        <div class="campo">
+          <label>Código de paciente</label>
+          <input type="text" id="busq_codigo" placeholder="Ej: ROPE15031985" maxlength="12"
+                 style="text-transform:uppercase;font-family:'IBM Plex Mono',monospace;letter-spacing:1px">
+        </div>
+        <div class="campo">
+          <label>Fecha de entrevista</label>
+          <div class="fecha-busq-grid">
+            <input type="text" id="busq_dia" placeholder="DD" maxlength="2"
+                   style="font-family:'IBM Plex Mono',monospace;text-align:center;border:1.5px solid var(--gris-borde);border-radius:var(--radio);padding:9px 6px;font-size:.9rem;width:100%">
+            <input type="text" id="busq_mes" placeholder="MM" maxlength="2"
+                   style="font-family:'IBM Plex Mono',monospace;text-align:center;border:1.5px solid var(--gris-borde);border-radius:var(--radio);padding:9px 6px;font-size:.9rem;width:100%">
+            <input type="text" id="busq_anio" placeholder="AAAA" maxlength="4"
+                   style="font-family:'IBM Plex Mono',monospace;text-align:center;border:1.5px solid var(--gris-borde);border-radius:var(--radio);padding:9px 6px;font-size:.9rem;width:100%">
+          </div>
+          <small style="color:var(--texto-suave);font-size:.7rem;margin-top:3px">Día · Mes · Año — puedes pegar la fecha</small>
+        </div>
+        <button class="btn-buscar" id="btnBuscar" onclick="buscarRegistro()">🔍 Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ESTADO INICIAL ══ -->
+  <div class="estado-inicial" id="estadoInicial">
+    <div class="icono">🔍</div>
+    <p>Ingresa el código de paciente y la fecha de entrevista para buscar el registro</p>
+    <small>Solo puedes editar registros de Perú</small>
+  </div>
+
+  <!-- ══ FORMULARIO DE CORRECCIÓN ══ -->
+  <div id="formulario-correc">
+
+    <div class="registro-encontrado" id="bannerEncontrado">
+      ✅ Registro encontrado — edita los campos que necesitas corregir y presiona Guardar cambios
+    </div>
+
+    <!-- Sección 0: Identificación -->
+    <div class="seccion">
+      <div class="seccion-header"><span class="num">0</span> Datos de Identificación</div>
+      <div class="seccion-body">
+        <div class="grid-2">
+          <div class="campo">
+            <label>Centro de tratamiento</label>
+            <input type="text" id="centro" placeholder="Nombre del centro">
+          </div>
+          <div class="campo">
+            <label>Etapa</label>
+            <select id="etapa">
+              <option value="">— Seleccione —</option>
+              <option value="ingreso">Ingreso (TOP1)</option>
+              <option value="seguimiento1">Seguimiento 1</option>
+              <option value="seguimiento2">Seguimiento 2</option>
+              <option value="egreso">Egreso</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Código de paciente</label>
+            <input type="text" id="codigo_paciente" maxlength="12"
+                   style="text-transform:uppercase;font-family:'IBM Plex Mono',monospace;letter-spacing:1px"
+                   placeholder="LLLLDDMMAAAA">
+          </div>
+          <div class="campo">
+            <label>Fecha de entrevista</label>
+            <input type="date" id="fecha_entrevista">
+          </div>
+          <div class="campo">
+            <label>Fecha de nacimiento</label>
+            <input type="date" id="fecha_nacimiento">
+          </div>
+          <div class="campo">
+            <label>Sexo</label>
+            <select id="sexo">
+              <option value="">— Seleccione —</option>
+              <option value="M">Masculino</option>
+              <option value="F">Femenino</option>
+              <option value="O">Otro</option>
+            </select>
+          </div>
+          <div class="campo span-2">
+            <label>Nombre del entrevistador</label>
+            <input type="text" id="nombre_entrevistador" placeholder="Nombre completo">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 1: Sustancias -->
+    <div class="seccion">
+      <div class="seccion-header"><span class="num">1</span> Sección 1: Uso de Sustancias</div>
+      <div class="seccion-body">
+        <div class="tabla-wrap">
+          <table class="sustancias">
+            <thead>
+              <tr>
+                <th>Sustancia</th>
+                <th>Última Semana</th>
+                <th>Semana 3</th>
+                <th>Semana 2</th>
+                <th>Semana 1</th>
+                <th>Total</th>
+                <th>Promedio</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Alcohol</td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="alcohol"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="alcohol"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="alcohol"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="alcohol"></td>
+                <td class="total-cell" id="alcohol_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="alcohol_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Tragos/día</small></td>
+              </tr>
+              <tr>
+                <td>Marihuana</td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="marihuana"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="marihuana"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="marihuana"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="marihuana"></td>
+                <td class="total-cell" id="marihuana_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="marihuana_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Pitos/día</small></td>
+              </tr>
+              <tr>
+                <td>Pasta Base</td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="pastabase"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="pastabase"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="pastabase"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="pastabase"></td>
+                <td class="total-cell" id="pastabase_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="pastabase_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Papelillos/día</small></td>
+              </tr>
+              <tr>
+                <td>Cocaína</td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="cocaina"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="cocaina"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="cocaina"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="cocaina"></td>
+                <td class="total-cell" id="cocaina_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="cocaina_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Gramos/día</small></td>
+              </tr>
+              <tr>
+                <td>Sedantes o Tranquilizantes</td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="sedantes"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="sedantes"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="sedantes"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="sedantes"></td>
+                <td class="total-cell" id="sedantes_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="sedantes_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Comprimidos/día</small></td>
+              </tr>
+              <tr class="otra-sust-fila">
+                <td colspan="7" style="padding:8px 10px">
+                  <input type="text" id="otra_sust_nombre" placeholder="Nombre de otra sustancia (si aplica)"
+                         style="width:100%;border:1.5px solid var(--gris-borde);border-radius:4px;padding:6px 10px;font-family:inherit;font-size:.85rem;">
+                </td>
+              </tr>
+              <tr>
+                <td><em style="color:var(--texto-suave)">Otra sustancia problema</em></td>
+                <td><input type="number" min="0" max="7" class="num-inp s4" data-sust="otra_sust"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s3" data-sust="otra_sust"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s2" data-sust="otra_sust"></td>
+                <td><input type="number" min="0" max="7" class="num-inp s1" data-sust="otra_sust"></td>
+                <td class="total-cell" id="otra_sust_total"></td>
+                <td><input type="number" step="any" class="prom-inp" id="otra_sust_prom" placeholder="—"><br><small style="color:var(--texto-suave);font-size:.68rem;display:block;text-align:center">Medida/día</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <hr class="sep">
+        <div class="campo">
+          <label>Sustancia principal</label>
+          <select id="sustancia_principal">
+            <option value="">— Seleccione —</option>
+            <option value="Alcohol">Alcohol</option>
+            <option value="Marihuana">Marihuana</option>
+            <option value="Pasta Base">Pasta Base</option>
+            <option value="Cocaína">Cocaína</option>
+            <option value="Sedantes">Sedantes</option>
+            <option value="Otra">Otra sustancia</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 2: Transgresión -->
+    <div class="seccion">
+      <div class="seccion-header"><span class="num">2</span> Sección 2: Transgresión a la Norma Social</div>
+      <div class="seccion-body">
+        <div class="transgresion-grid">
+          <div class="toggle-campo">
+            <label>Hurto</label>
+            <div class="toggle-btn-group" id="tg-hurto">
+              <button type="button" onclick="setToggle('hurto','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('hurto','N',this)">No</button>
+            </div>
+          </div>
+          <div class="toggle-campo">
+            <label>Robo</label>
+            <div class="toggle-btn-group" id="tg-robo">
+              <button type="button" onclick="setToggle('robo','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('robo','N',this)">No</button>
+            </div>
+          </div>
+          <div class="toggle-campo">
+            <label>Venta de droga</label>
+            <div class="toggle-btn-group" id="tg-venta_droga">
+              <button type="button" onclick="setToggle('venta_droga','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('venta_droga','N',this)">No</button>
+            </div>
+          </div>
+          <div class="toggle-campo">
+            <label>Riña / Pelea</label>
+            <div class="toggle-btn-group" id="tg-rina_pelea">
+              <button type="button" onclick="setToggle('rina_pelea','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('rina_pelea','N',this)">No</button>
+            </div>
+          </div>
+          <div class="toggle-campo">
+            <label>Otra acción</label>
+            <div class="toggle-btn-group" id="tg-otra_accion">
+              <button type="button" onclick="setToggle('otra_accion','S',this);mostrarOtraAccion(true)">Sí</button>
+              <button type="button" onclick="setToggle('otra_accion','N',this);mostrarOtraAccion(false)">No</button>
+            </div>
+          </div>
+        </div>
+        <div id="otra-accion-desc-wrap" class="campo" style="display:none;margin-bottom:16px;">
+          <label>Descripción de otra acción</label>
+          <input type="text" id="otra_accion_desc" placeholder="Describa la acción">
+        </div>
+
+        <hr class="sep">
+        <p style="font-size:.75rem;font-weight:700;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+          Violencia intrafamiliar (VIF) — días por semana (0–7)
+        </p>
+        <div class="tabla-wrap">
+          <table class="vif-table">
+            <thead>
+              <tr><th>Última Semana</th><th>Semana 3</th><th>Semana 2</th><th>Semana 1</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="number" id="vif_s4" min="0" max="7" class="num-inp" oninput="calcVif()"></td>
+                <td><input type="number" id="vif_s3" min="0" max="7" class="num-inp" oninput="calcVif()"></td>
+                <td><input type="number" id="vif_s2" min="0" max="7" class="num-inp" oninput="calcVif()"></td>
+                <td><input type="number" id="vif_s1" min="0" max="7" class="num-inp" oninput="calcVif()"></td>
+                <td class="total-cell" id="vif_total"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 3: Salud -->
+    <div class="seccion">
+      <div class="seccion-header"><span class="num">3</span> Sección 3: Salud y Funcionamiento Social</div>
+      <div class="seccion-body">
+
+        <!-- Salud psicológica -->
+        <div class="escala-wrap">
+          <div class="escala-label">3a. Salud Psicológica</div>
+          <div class="escala-extremos"><span>0 · Pésima</span><span>20 · Excelente</span></div>
+          <div class="escala-opciones">
+            <label><input type="radio" name="salud_psicologica" value="0">0</label>
+            <label><input type="radio" name="salud_psicologica" value="1">1</label>
+            <label><input type="radio" name="salud_psicologica" value="2">2</label>
+            <label><input type="radio" name="salud_psicologica" value="3">3</label>
+            <label><input type="radio" name="salud_psicologica" value="4">4</label>
+            <label><input type="radio" name="salud_psicologica" value="5">5</label>
+            <label><input type="radio" name="salud_psicologica" value="6">6</label>
+            <label><input type="radio" name="salud_psicologica" value="7">7</label>
+            <label><input type="radio" name="salud_psicologica" value="8">8</label>
+            <label><input type="radio" name="salud_psicologica" value="9">9</label>
+            <label><input type="radio" name="salud_psicologica" value="10">10</label>
+            <label><input type="radio" name="salud_psicologica" value="11">11</label>
+            <label><input type="radio" name="salud_psicologica" value="12">12</label>
+            <label><input type="radio" name="salud_psicologica" value="13">13</label>
+            <label><input type="radio" name="salud_psicologica" value="14">14</label>
+            <label><input type="radio" name="salud_psicologica" value="15">15</label>
+            <label><input type="radio" name="salud_psicologica" value="16">16</label>
+            <label><input type="radio" name="salud_psicologica" value="17">17</label>
+            <label><input type="radio" name="salud_psicologica" value="18">18</label>
+            <label><input type="radio" name="salud_psicologica" value="19">19</label>
+            <label><input type="radio" name="salud_psicologica" value="20">20</label>
+          </div>
+        </div>
+
+        <hr class="sep">
+        <!-- Trabajo -->
+        <p style="font-size:.75rem;font-weight:700;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3b. Trabajo remunerado — días por semana (0–7)</p>
+        <div class="tabla-wrap" style="margin-bottom:16px;">
+          <table class="vif-table">
+            <thead><tr><th>Última Semana</th><th>Semana 3</th><th>Semana 2</th><th>Semana 1</th><th>Total</th></tr></thead>
+            <tbody><tr>
+              <td><input type="number" id="dias_trabajo_s4" min="0" max="7" class="num-inp" oninput="calcSimple('dias_trabajo')"></td>
+              <td><input type="number" id="dias_trabajo_s3" min="0" max="7" class="num-inp" oninput="calcSimple('dias_trabajo')"></td>
+              <td><input type="number" id="dias_trabajo_s2" min="0" max="7" class="num-inp" oninput="calcSimple('dias_trabajo')"></td>
+              <td><input type="number" id="dias_trabajo_s1" min="0" max="7" class="num-inp" oninput="calcSimple('dias_trabajo')"></td>
+              <td class="total-cell" id="dias_trabajo_total"></td>
+            </tr></tbody>
+          </table>
+        </div>
+
+        <!-- Educación -->
+        <p style="font-size:.75rem;font-weight:700;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3c. Educación / Formación — días por semana (0–7)</p>
+        <div class="tabla-wrap" style="margin-bottom:16px;">
+          <table class="vif-table">
+            <thead><tr><th>Última Semana</th><th>Semana 3</th><th>Semana 2</th><th>Semana 1</th><th>Total</th></tr></thead>
+            <tbody><tr>
+              <td><input type="number" id="dias_educacion_s4" min="0" max="7" class="num-inp" oninput="calcSimple('dias_educacion')"></td>
+              <td><input type="number" id="dias_educacion_s3" min="0" max="7" class="num-inp" oninput="calcSimple('dias_educacion')"></td>
+              <td><input type="number" id="dias_educacion_s2" min="0" max="7" class="num-inp" oninput="calcSimple('dias_educacion')"></td>
+              <td><input type="number" id="dias_educacion_s1" min="0" max="7" class="num-inp" oninput="calcSimple('dias_educacion')"></td>
+              <td class="total-cell" id="dias_educacion_total"></td>
+            </tr></tbody>
+          </table>
+        </div>
+
+        <hr class="sep">
+        <!-- Salud física -->
+        <div class="escala-wrap">
+          <div class="escala-label">3e. Salud Física</div>
+          <div class="escala-extremos"><span>0 · Pésima</span><span>20 · Excelente</span></div>
+          <div class="escala-opciones">
+            <label><input type="radio" name="salud_fisica" value="0">0</label>
+            <label><input type="radio" name="salud_fisica" value="1">1</label>
+            <label><input type="radio" name="salud_fisica" value="2">2</label>
+            <label><input type="radio" name="salud_fisica" value="3">3</label>
+            <label><input type="radio" name="salud_fisica" value="4">4</label>
+            <label><input type="radio" name="salud_fisica" value="5">5</label>
+            <label><input type="radio" name="salud_fisica" value="6">6</label>
+            <label><input type="radio" name="salud_fisica" value="7">7</label>
+            <label><input type="radio" name="salud_fisica" value="8">8</label>
+            <label><input type="radio" name="salud_fisica" value="9">9</label>
+            <label><input type="radio" name="salud_fisica" value="10">10</label>
+            <label><input type="radio" name="salud_fisica" value="11">11</label>
+            <label><input type="radio" name="salud_fisica" value="12">12</label>
+            <label><input type="radio" name="salud_fisica" value="13">13</label>
+            <label><input type="radio" name="salud_fisica" value="14">14</label>
+            <label><input type="radio" name="salud_fisica" value="15">15</label>
+            <label><input type="radio" name="salud_fisica" value="16">16</label>
+            <label><input type="radio" name="salud_fisica" value="17">17</label>
+            <label><input type="radio" name="salud_fisica" value="18">18</label>
+            <label><input type="radio" name="salud_fisica" value="19">19</label>
+            <label><input type="radio" name="salud_fisica" value="20">20</label>
+          </div>
+        </div>
+
+        <hr class="sep">
+        <!-- Vivienda -->
+        <p style="font-size:.75rem;font-weight:700;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">3f. Vivienda</p>
+        <div class="vivienda-grid">
+          <div class="toggle-campo">
+            <label>Vivienda estable</label>
+            <div class="toggle-btn-group" id="tg-vivienda_estable">
+              <button type="button" onclick="setToggle('vivienda_estable','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('vivienda_estable','N',this)">No</button>
+            </div>
+          </div>
+          <div class="toggle-campo">
+            <label>Vivienda básica</label>
+            <div class="toggle-btn-group" id="tg-vivienda_basica">
+              <button type="button" onclick="setToggle('vivienda_basica','S',this)">Sí</button>
+              <button type="button" onclick="setToggle('vivienda_basica','N',this)">No</button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="sep">
+        <!-- Calidad de vida -->
+        <div class="escala-wrap">
+          <div class="escala-label">3g. Calidad de Vida General</div>
+          <div class="escala-extremos"><span>0 · Pésima</span><span>20 · Excelente</span></div>
+          <div class="escala-opciones">
+            <label><input type="radio" name="calidad_vida" value="0">0</label>
+            <label><input type="radio" name="calidad_vida" value="1">1</label>
+            <label><input type="radio" name="calidad_vida" value="2">2</label>
+            <label><input type="radio" name="calidad_vida" value="3">3</label>
+            <label><input type="radio" name="calidad_vida" value="4">4</label>
+            <label><input type="radio" name="calidad_vida" value="5">5</label>
+            <label><input type="radio" name="calidad_vida" value="6">6</label>
+            <label><input type="radio" name="calidad_vida" value="7">7</label>
+            <label><input type="radio" name="calidad_vida" value="8">8</label>
+            <label><input type="radio" name="calidad_vida" value="9">9</label>
+            <label><input type="radio" name="calidad_vida" value="10">10</label>
+            <label><input type="radio" name="calidad_vida" value="11">11</label>
+            <label><input type="radio" name="calidad_vida" value="12">12</label>
+            <label><input type="radio" name="calidad_vida" value="13">13</label>
+            <label><input type="radio" name="calidad_vida" value="14">14</label>
+            <label><input type="radio" name="calidad_vida" value="15">15</label>
+            <label><input type="radio" name="calidad_vida" value="16">16</label>
+            <label><input type="radio" name="calidad_vida" value="17">17</label>
+            <label><input type="radio" name="calidad_vida" value="18">18</label>
+            <label><input type="radio" name="calidad_vida" value="19">19</label>
+            <label><input type="radio" name="calidad_vida" value="20">20</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Botón guardar -->
+    <button type="button" class="btn-guardar" id="btnGuardar" onclick="guardarCambios()">
+      ✓ &nbsp;Guardar cambios
+    </button>
+    <p class="nota">Los cambios se aplican directamente en la base de datos QALAT · UNODC Chile</p>
+
+  </div><!-- fin formulario-correc -->
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = '%%SUPABASE_URL%%';
+const SUPABASE_KEY = '%%SUPABASE_KEY%%';
+
+// ID del registro encontrado (para el UPDATE)
+let registroId = null;
+
+// Toggles
+const toggleValues = {
+  hurto:null, robo:null, venta_droga:null,
+  rina_pelea:null, otra_accion:null,
+  vivienda_estable:null, vivienda_basica:null
+};
+
+function setToggle(campo, valor, btn) {
+  toggleValues[campo] = valor;
+  const group = btn.closest('.toggle-btn-group');
+  group.querySelectorAll('button').forEach(b => b.classList.remove('activo-si','activo-no'));
+  btn.classList.add(valor==='S' ? 'activo-si' : 'activo-no');
+}
+function mostrarOtraAccion(show) {
+  document.getElementById('otra-accion-desc-wrap').style.display = show ? 'flex' : 'none';
+}
+
+// Toast
+function mostrarToast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = tipo === 'error' ? 'error-toast' : tipo === 'warn' ? 'warn-toast' : '';
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 5000);
+}
+
+// Cálculo totales sustancias
+function calcAct(prefix) {
+  const sems = ['s4','s3','s2','s1'];
+  let total = null;
+  sems.forEach(s => {
+    const el = document.querySelector(`input.${s}[data-sust="${prefix}"]`);
+    if (el && el.value !== '' && !el.classList.contains('inp-error')) {
+      const v = parseInt(el.value);
+      if (!isNaN(v)) total = (total === null ? 0 : total) + v;
+    }
+  });
+  const tcell = document.getElementById(`${prefix}_total`);
+  if (tcell) tcell.textContent = total !== null ? total : '';
+}
+
+function calcVif() {
+  const ids = ['vif_s4','vif_s3','vif_s2','vif_s1'];
+  let total = null;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== '') {
+      const v = parseInt(el.value);
+      if (!isNaN(v)) total = (total === null ? 0 : total) + v;
+    }
+  });
+  const tc = document.getElementById('vif_total');
+  if (tc) tc.textContent = total !== null ? total : '';
+}
+
+function calcSimple(prefix) {
+  const ids = [`${prefix}_s4`,`${prefix}_s3`,`${prefix}_s2`,`${prefix}_s1`];
+  let total = null;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== '') {
+      const v = parseInt(el.value);
+      if (!isNaN(v)) total = (total === null ? 0 : total) + v;
+    }
+  });
+  const tc = document.getElementById(`${prefix}_total`);
+  if (tc) tc.textContent = total !== null ? total : '';
+}
+
+// Inicializar listeners de sustancias
+['alcohol','marihuana','pastabase','cocaina','sedantes','otra_sust'].forEach(prefix => {
+  ['s4','s3','s2','s1'].forEach(s => {
+    const el = document.querySelector(`input.${s}[data-sust="${prefix}"]`);
+    if (!el) return;
+    el.addEventListener('input', () => calcAct(prefix));
+    el.addEventListener('blur', () => calcAct(prefix));
+  });
+});
+
+// ── BÚSQUEDA ──────────────────────────────────────────────
+async function buscarRegistro() {
+  const codigo = document.getElementById('busq_codigo').value.trim().toUpperCase();
+  const dia    = document.getElementById('busq_dia').value.trim().padStart(2,'0');
+  const mes    = document.getElementById('busq_mes').value.trim().padStart(2,'0');
+  const anio   = document.getElementById('busq_anio').value.trim();
+
+  if (!codigo) {
+    mostrarToast('⚠ Ingresa el código de paciente', 'error'); return;
+  }
+  if (!dia || !mes || !anio || anio.length !== 4) {
+    mostrarToast('⚠ Ingresa la fecha completa (DD · MM · AAAA)', 'error'); return;
+  }
+
+  const fecha = `${anio}-${mes}-${dia}`;  // formato Supabase: YYYY-MM-DD
+
+  const btn = document.getElementById('btnBuscar');
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
+
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/top_registros?codigo_paciente=eq.${encodeURIComponent(codigo)}&fecha_entrevista=eq.${fecha}&pais=eq.Per%C3%BA&select=*`;
+    const resp = await fetch(url, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await resp.json();
+
+    if (!data || data.length === 0) {
+      mostrarToast(`⚠ No se encontró registro: ${codigo} · ${dia}/${mes}/${anio}`, 'warn');
+      document.getElementById('formulario-correc').style.display = 'none';
+      document.getElementById('estadoInicial').style.display = 'block';
+    } else {
+      const reg = data[0];
+      registroId = reg.id;
+      poblarFormulario(reg);
+      document.getElementById('estadoInicial').style.display = 'none';
+      document.getElementById('formulario-correc').style.display = 'block';
+      document.getElementById('bannerEncontrado').textContent =
+        `✅ Registro encontrado — ID ${registroId} · ${codigo} · ${dia}/${mes}/${anio} — edita lo que necesitas y guarda`;
+      mostrarToast('✓ Registro cargado correctamente');
+    }
+  } catch(e) {
+    mostrarToast('Error de conexión al buscar: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔍 Buscar';
+}
+
+// ── POBLAR FORMULARIO CON DATOS DEL REGISTRO ──────────────
+function poblarFormulario(r) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined) el.value = val;
+  };
+  const setNum = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = (val !== null && val !== undefined) ? val : '';
+  };
+  const setTotal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (val !== null && val !== undefined) ? val : '';
+  };
+  const setToggleBtn = (campo, val) => {
+    if (!val) return;
+    toggleValues[campo] = val;
+    const group = document.getElementById(`tg-${campo}`);
+    if (!group) return;
+    group.querySelectorAll('button').forEach(b => b.classList.remove('activo-si','activo-no'));
+    const btns = group.querySelectorAll('button');
+    if (val === 'S' && btns[0]) btns[0].classList.add('activo-si');
+    if (val === 'N' && btns[1]) btns[1].classList.add('activo-no');
+  };
+  const setRadio = (name, val) => {
+    if (val === null || val === undefined) return;
+    const radio = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (radio) radio.checked = true;
+  };
+  const setSustSem = (sust, sem, val) => {
+    const el = document.querySelector(`input.${sem}[data-sust="${sust}"]`);
+    if (el) el.value = (val !== null && val !== undefined) ? val : '';
+  };
+
+  // Identificación
+  set('centro', r.centro);
+  set('etapa', r.etapa);
+  set('codigo_paciente', r.codigo_paciente);
+  set('fecha_entrevista', r.fecha_entrevista);
+  set('fecha_nacimiento', r.fecha_nacimiento);
+  set('sexo', r.sexo);
+  set('nombre_entrevistador', r.nombre_entrevistador);
+
+  // Sustancias
+  ['alcohol','marihuana','pastabase','cocaina','sedantes','otra_sust'].forEach(sust => {
+    setSustSem(sust,'s4', r[`${sust}_s4`]);
+    setSustSem(sust,'s3', r[`${sust}_s3`]);
+    setSustSem(sust,'s2', r[`${sust}_s2`]);
+    setSustSem(sust,'s1', r[`${sust}_s1`]);
+    setTotal(`${sust}_total`, r[`${sust}_total`]);
+    setNum(`${sust}_prom`, r[`${sust}_prom`]);
+  });
+  set('otra_sust_nombre', r.otra_sust_nombre);
+  set('sustancia_principal', r.sustancia_principal);
+
+  // Transgresión
+  setToggleBtn('hurto', r.hurto);
+  setToggleBtn('robo', r.robo);
+  setToggleBtn('venta_droga', r.venta_droga);
+  setToggleBtn('rina_pelea', r.rina_pelea);
+  setToggleBtn('otra_accion', r.otra_accion);
+  if (r.otra_accion === 'S') mostrarOtraAccion(true);
+  set('otra_accion_desc', r.otra_accion_desc);
+
+  // VIF
+  setNum('vif_s4', r.vif_s4); setNum('vif_s3', r.vif_s3);
+  setNum('vif_s2', r.vif_s2); setNum('vif_s1', r.vif_s1);
+  setTotal('vif_total', r.vif_total);
+
+  // Salud y funcionamiento
+  setRadio('salud_psicologica', r.salud_psicologica);
+  setNum('dias_trabajo_s4', r.dias_trabajo_s4); setNum('dias_trabajo_s3', r.dias_trabajo_s3);
+  setNum('dias_trabajo_s2', r.dias_trabajo_s2); setNum('dias_trabajo_s1', r.dias_trabajo_s1);
+  setTotal('dias_trabajo_total', r.dias_trabajo_total);
+  setNum('dias_educacion_s4', r.dias_educacion_s4); setNum('dias_educacion_s3', r.dias_educacion_s3);
+  setNum('dias_educacion_s2', r.dias_educacion_s2); setNum('dias_educacion_s1', r.dias_educacion_s1);
+  setTotal('dias_educacion_total', r.dias_educacion_total);
+  setRadio('salud_fisica', r.salud_fisica);
+  setToggleBtn('vivienda_estable', r.vivienda_estable);
+  setToggleBtn('vivienda_basica', r.vivienda_basica);
+  setRadio('calidad_vida', r.calidad_vida);
+}
+
+// ── GUARDAR CAMBIOS (UPDATE) ──────────────────────────────
+async function guardarCambios() {
+  if (!registroId) {
+    mostrarToast('⚠ Primero busca un registro', 'warn');
+    return;
+  }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  const n = id => { const v = parseFloat(document.getElementById(id)?.value); return isNaN(v) ? null : v; };
+  const s = id => document.getElementById(id)?.value || null;
+  const sv = (sust, sem) => {
+    const el = document.querySelector(`input.${sem}[data-sust="${sust}"]`);
+    return (el && el.value !== '') ? parseInt(el.value) : null;
+  };
+  const tv = id => { const el = document.getElementById(id); return el ? parseInt(el.textContent) || null : null; };
+  const pv = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
+
+  const payload = {
+    centro: s('centro'), etapa: s('etapa'),
+    codigo_paciente: s('codigo_paciente'),
+    fecha_entrevista: s('fecha_entrevista'),
+    fecha_nacimiento: s('fecha_nacimiento') || null,
+    sexo: s('sexo') || null,
+    nombre_entrevistador: s('nombre_entrevistador') || null,
+
+    alcohol_s4: sv('alcohol','s4'), alcohol_s3: sv('alcohol','s3'),
+    alcohol_s2: sv('alcohol','s2'), alcohol_s1: sv('alcohol','s1'),
+    alcohol_total: tv('alcohol_total'), alcohol_prom: pv('alcohol_prom'),
+
+    marihuana_s4: sv('marihuana','s4'), marihuana_s3: sv('marihuana','s3'),
+    marihuana_s2: sv('marihuana','s2'), marihuana_s1: sv('marihuana','s1'),
+    marihuana_total: tv('marihuana_total'), marihuana_prom: pv('marihuana_prom'),
+
+    pastabase_s4: sv('pastabase','s4'), pastabase_s3: sv('pastabase','s3'),
+    pastabase_s2: sv('pastabase','s2'), pastabase_s1: sv('pastabase','s1'),
+    pastabase_total: tv('pastabase_total'), pastabase_prom: pv('pastabase_prom'),
+
+    cocaina_s4: sv('cocaina','s4'), cocaina_s3: sv('cocaina','s3'),
+    cocaina_s2: sv('cocaina','s2'), cocaina_s1: sv('cocaina','s1'),
+    cocaina_total: tv('cocaina_total'), cocaina_prom: pv('cocaina_prom'),
+
+    sedantes_s4: sv('sedantes','s4'), sedantes_s3: sv('sedantes','s3'),
+    sedantes_s2: sv('sedantes','s2'), sedantes_s1: sv('sedantes','s1'),
+    sedantes_total: tv('sedantes_total'), sedantes_prom: pv('sedantes_prom'),
+
+    otra_sust_nombre: s('otra_sust_nombre') || null,
+    otra_sust_s4: sv('otra_sust','s4'), otra_sust_s3: sv('otra_sust','s3'),
+    otra_sust_s2: sv('otra_sust','s2'), otra_sust_s1: sv('otra_sust','s1'),
+    otra_sust_total: tv('otra_sust_total'), otra_sust_prom: pv('otra_sust_prom'),
+
+    sustancia_principal: s('sustancia_principal'),
+
+    hurto: toggleValues.hurto, robo: toggleValues.robo,
+    venta_droga: toggleValues.venta_droga, rina_pelea: toggleValues.rina_pelea,
+    otra_accion: toggleValues.otra_accion,
+    otra_accion_desc: s('otra_accion_desc') || null,
+    vif_s4: n('vif_s4'), vif_s3: n('vif_s3'), vif_s2: n('vif_s2'), vif_s1: n('vif_s1'),
+    vif_total: tv('vif_total'),
+
+    salud_psicologica: parseInt(document.querySelector('input[name="salud_psicologica"]:checked')?.value ?? 'NaN') || null,
+    dias_trabajo_s4: n('dias_trabajo_s4'), dias_trabajo_s3: n('dias_trabajo_s3'),
+    dias_trabajo_s2: n('dias_trabajo_s2'), dias_trabajo_s1: n('dias_trabajo_s1'),
+    dias_trabajo_total: tv('dias_trabajo_total'),
+    dias_educacion_s4: n('dias_educacion_s4'), dias_educacion_s3: n('dias_educacion_s3'),
+    dias_educacion_s2: n('dias_educacion_s2'), dias_educacion_s1: n('dias_educacion_s1'),
+    dias_educacion_total: tv('dias_educacion_total'),
+    salud_fisica: parseInt(document.querySelector('input[name="salud_fisica"]:checked')?.value ?? 'NaN') || null,
+    vivienda_estable: toggleValues.vivienda_estable,
+    vivienda_basica: toggleValues.vivienda_basica,
+    calidad_vida: parseInt(document.querySelector('input[name="calidad_vida"]:checked')?.value ?? 'NaN') || null
+  };
+
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/top_registros?id=eq.${registroId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (resp.ok || resp.status === 204) {
+      mostrarToast('✓ Cambios guardados correctamente en la base de datos');
+    } else {
+      const err = await resp.json();
+      mostrarToast('Error al guardar: ' + (err.message || resp.status), 'error');
+    }
+  } catch(e) {
+    mostrarToast('Error de conexión. Verifique su internet.', 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✓ Guardar cambios';
+}
+
+// Enter en búsqueda
+['busq_codigo','busq_dia','busq_mes','busq_anio'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') buscarRegistro();
+  });
+});
+document.getElementById('busq_codigo').addEventListener('input', function() {
+  const pos = this.selectionStart;
+  this.value = this.value.toUpperCase();
+  this.setSelectionRange(pos, pos);
+});
+</script>
+</body>
+</html>
+"""
 
 with tab_correccion:
-    # Solo Perú y UNODC acceden a corrección por ahora
     if rol not in ('Perú', 'UNODC'):
         st.info(f'El formulario de corrección para {flag} {rol} estará disponible próximamente.')
     else:
-        # Selector de país para UNODC
         if es_unodc:
-            pais_corr = st.selectbox(
-                'Corregir registros de:',
-                ['Perú'],   # agregar 'Ecuador', 'México' cuando existan sus formularios
-                key='corr_pais_sel'
-            )
-        else:
-            pais_corr = rol
+            st.selectbox('Corregir registros de:', ['Perú'], key='corr_pais_sel')
 
         st.markdown(
             f'''<div style="background:#FFF8E1;border-left:4px solid #F9A825;
             padding:.7rem 1.2rem;border-radius:6px;margin-bottom:.5rem;font-size:.85rem;">
-            <b>⚠ Módulo de corrección — {flag} {pais_corr}.</b>
+            <b>⚠ Módulo de corrección — 🇵🇪 Perú.</b>
             Los cambios se aplican directamente en la base de datos QALAT.
             </div>''', unsafe_allow_html=True
         )
 
         try:
-            sb_url = st.secrets['SUPABASE_URL']
-            sb_key = st.secrets['SUPABASE_KEY']
-
-            with open(_CORRECCION_HTML, encoding='utf-8') as _f:
-                _html = _f.read()
-
-            # Inyectar credenciales desde Secrets (reemplaza placeholders)
-            _html = _html.replace('%%SUPABASE_URL%%', sb_url)
-            _html = _html.replace('%%SUPABASE_KEY%%',  sb_key)
-
-            # Renderizar el formulario completo dentro de la pestaña
-            _components.html(_html, height=4200, scrolling=True)
-
-        except FileNotFoundError:
-            st.error(
-                '❌ No se encontró el archivo `correccion_top_peru.html` en la raíz del repositorio. '
-                'Asegúrate de que el archivo esté en el repo junto a `app.py`.'
-            )
+            _html = _CORRECCION_HTML_TEMPLATE
+            _html = _html.replace('%%SUPABASE_URL%%', st.secrets['SUPABASE_URL'])
+            _html = _html.replace('%%SUPABASE_KEY%%',  st.secrets['SUPABASE_KEY'])
+            _components.html(_html, height=4500, scrolling=True)
         except KeyError:
             st.error('⚠ Las credenciales de Supabase no están configuradas en Secrets.')
         except Exception as _e:
